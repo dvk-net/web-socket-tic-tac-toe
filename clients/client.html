@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            background-image: url(./background.jpg);
+        }
+        div {
+            padding: 10px;
+            border: 1px solid black;
+            background-color: white;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin-right: -50%;
+            transform: translate(-50%, -50%)
+        }
+        #main-table {
+            border: 1px solid black;
+            
+        }
+        #board-cell {
+            position: relative;
+            width: 50%;
+        }
+        #board {
+            width: 100px;
+            background-color: white;
+            border-collapse: collapse;
+            
+        }
+        #board td, #board th {
+            border: 1px solid black;
+            text-align: center;
+        }
+        #board tr:first-child td {
+            border-top: 0;
+        }
+        #board tr:last-child td {
+            border-bottom: 0;
+        }
+        #board tr td:first-child,
+        #board tr th:first-child {
+            border-left: 0;
+        }
+        #board tr td:last-child,
+        #board tr th:last-child {
+            border-right: 0;
+        }
+       </style>
+</head>
+<body>
+    
+        <table width="100%" id="main-table">
+            <tr>
+                <td>
+                    <h3>WebSocket Tic Tac Toe</h3>
+                    <h4>Current player: <span id="current-player"></span></h4>
+                    You play by: <span id="player"></span><br>
+                    Info: <span id="info"></span>
+                </td>
+                <td id="board-cell">
+                    <div>
+                        <table id="board">
+                            <tr>
+                                <td id="1" onclick="cellClick(1)">*</td>
+                                <td id="2" onclick="cellClick(2)">*</td>
+                                <td id="3" onclick="cellClick(3)">*</td>
+                            </tr>
+                            <tr>
+                                <td id="4" onclick="cellClick(4)">*</td>
+                                <td id="5" onclick="cellClick(5)">*</td>
+                                <td id="6" onclick="cellClick(6)">*</td>
+                            </tr>
+                            <tr>
+                                <td id="7" onclick="cellClick(7)">*</td>
+                                <td id="8" onclick="cellClick(8)">*</td>
+                                <td id="9" onclick="cellClick(9)">*</td>
+                            </tr>
+                        </table>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    
+    
+    
+    
+<script>
+    var ws = new WebSocket("ws://localhost:8000/ws");
+    let player = null
+    let currentPlayer = null
+    let gameOver = false
+    let currentPlyerDisplay = document.getElementById('current-player')
+    let infoDisplay = document.getElementById('info')
+    let infoPlayer = document.getElementById('player')
+    swaper = {
+        "X": "O",
+        "O": "X"
+    }
+    let checks = [
+            [0,1,2],
+            [3,4,5],
+            [6,7,8],
+            [0,3,6],
+            [1,4,7],
+            [2,5,8],
+            [0,4,8],
+            [6,4,2],
+        ]
+    function highlightAll() {
+        for (let c=1; c<=10; c++) {
+            document.getElementById(c).style.backgroundColor = 'gray';
+        }
+    }
+    function hightLightRow() {
+        let cells = []
+        for (let c=1; c<=10; c++) {
+            cells.push(document.getElementById(c))
+        }
+        checks.forEach((row) => {
+            console.log(row);
+            if (cells[row[0]].innerHTML == cells[row[1]].innerHTML && cells[row[0]].innerHTML == cells[row[2]].innerHTML && cells[row[0]].innerHTML != "*") {
+                console.log(cells[row[0]].innerHTML, cells[row[1]].innerHTML, cells[row[2]].innerHTML);
+                cells[row[0]].style.backgroundColor = 'red';
+                cells[row[1]].style.backgroundColor = 'red';
+                cells[row[2]].style.backgroundColor = 'red';
+            return
+            }
+        });
+    }
+    function toggleplayer() {
+        currentPlayer = swaper[currentPlayer]
+        console.log("Toggler ", player, currentPlayer);
+        if (player == currentPlayer) {
+            infoDisplay.innerHTML = "Your turn!"
+            currentPlyerDisplay.innerHTML = player
+        } else {
+            infoDisplay.innerHTML = "Your opponent's turn!"
+            currentPlyerDisplay.innerHTML = swaper[player]
+        }
+    }
+
+    function checkCell(cell) {
+        if (cell.innerHTML == '*' & player == currentPlayer) {
+            return true
+        }
+        return false
+    }
+    function updateCell(id, sign) {
+        cell = document.getElementById(id)
+        cell.innerHTML = sign
+    }
+    function updateInfo(message) {
+        infoDisplay.innerHTML = message
+    } 
+    function cellClick(id) {
+        if (gameOver) {
+            return
+        }
+        cell = document.getElementById(id)
+        if (checkCell(cell)) {
+            ws.send(JSON.stringify({player: player, cell: id }))
+        } else {
+            infoDisplay.innerHTML = "Choose another cell! Or wait for your turn!"
+        }
+    }
+
+    ws.onmessage = function(e) {
+        response = JSON.parse(e.data)
+        console.log("On message",response);
+        if (response.init) {
+            infoDisplay.innerHTML = "You play by: "+ response.player + ". " + response.message
+            infoPlayer.innerHTML = response.player
+            if (response.message != "Waiting for another player") {
+                player = response.player
+            }
+            currentPlayer = "X"
+            currentPlyerDisplay.innerHTML = "X"
+        } else {
+            if (response.message == 'move') {
+                updateCell(response.cell, response.player)
+                toggleplayer() 
+            } else if (response.message == 'draw') {
+                updateInfo("It's a draw")
+                updateCell(response.cell, response.player)
+                highlightAll()
+                ws.close(1000)
+            } else if (response.message == 'won') {
+                updateInfo("Player " + response.player + " won!")
+                updateCell(response.cell, response.player)
+                hightLightRow()
+                ws.close(1000)
+            } else if (response.player == player & response.message == 'choose another one') {
+                updateInfo("Cell is not available")
+            } else {
+                console.log(response);
+            }
+        }
+    }
+    ws.onclose = function(e) {
+        if (e.code == 4000) {
+            infoDisplay.innerHTML = "No more places!!"
+        } else if (e.code != 1000){
+            infoDisplay.innerHTML = "Error"
+        }
+        gameOver = true
+    }
+</script>
+</body>
+</html>
