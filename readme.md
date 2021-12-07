@@ -1,4 +1,4 @@
-# Web-socket Tic Tac Toe game (How to video soon)
+# Web-socket Tic Tac Toe game [Video How to (RUS)](https://youtu.be/mlDanE_-0mY)
 ![This is an image](./thegame.png)
 ## How to install
 
