@@ -30,6 +30,7 @@ def is_draw():
 
 
 def if_won():
+    # check if some player has just won the game
     global board
     if board[0] == board[1] == board[2] != None or \
             board[3] == board[4] == board[5] != None or \
