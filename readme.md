@@ -8,6 +8,7 @@ pip istall -r requirements.txt
 
 ## How to run
 
+
 ```bash
 cd ./server
 uvicorn main:app --reload
