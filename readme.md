@@ -3,7 +3,7 @@
 ## How to install
 
 ```bash
-pip istall -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ## How to run
